@@ -6,8 +6,8 @@ import telegram
 from telegram import InputFile
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
-from Bot.models import UserInfo
-from Bot import track_send
+from Bot.models import *
+from Bot import track_send, price_tracker
 # Create your views here.
 
 global Bot 
@@ -24,15 +24,15 @@ def home(request):
         # sticker_info = Bot.get_file(file_id=sticker_file_id)
         # file_identifier = sticker_info.file_id
         
-        reply_text = f"Hi {body.get('message').get('from').get('first_name')}!\n<b>Welcome to OrderTrackingBoB!</b>\n\nTo track your package, please include <b>track</b> in your message and end the message with the tracking id provided by <b>Ekart</b>.\nFor example: <b>hello track 'tracking id'</b>.\n\n For listing of your history type <b>/history</b>.\n\n For deleting a particular entry type <b>delete</b>.\n\n To delete your entire history type <b>/del_all.</b>"
+        reply_text = f"Hi {body.get('message').get('from').get('first_name')}!\n<b>Welcome to OrderTrackingBoB!</b>\n\nTo track your package, please include <b>BoBtrack</b> in your message and end the message with the tracking id provided by <b>Ekart</b>.\nFor example: <b>hello BoBtrack 'tracking id'</b>.\n\n For listing of your history type <b>/history</b>.\n\n For deleting a particular entry type <b>/delete</b>.\n\n To delete your entire history type <b>/del_all.</b>\n\n To track price of a product type <b>/price_check</b>.\n Eg: /price_check (product url)"
         user_text = body.get('message').get('text')
         chat_id = body.get('message').get('from').get('id')
         m_reply_id = body.get('message').get('message_id')
-
         lst = user_text.split(' ')
         tracking_id = lst[-1]
+        print('//////////',tracking_id)
         
-        if 'track' in user_text.lower():
+        if 'BoBtrack' in user_text.lower():
         
             user_obj = UserInfo(
                 chat_id = chat_id,
@@ -50,11 +50,11 @@ def home(request):
         # if '/start' in user_text.lower():
             reply_text = track_send.processed_data(tracking_id)
 
-        if 'history' in user_text.lower():
+        elif '/history' in user_text.lower():
             chat_id = chat_id
             reply_text = track_send.get_history(chat_id)
 
-        if '/delete' in user_text.lower():
+        elif '/delete' in user_text.lower():
             try:
                 entry_to_be_del = int(user_text[-1]) - 1
                 chat_id = chat_id
@@ -63,13 +63,30 @@ def home(request):
                 else:
                     reply_text = 'Invalid input.\nPlease provide a number listed in the history.'
             except ValueError:
-                reply_text = 'Invalid input.\nPlease provide an integer at the end of the \delete command.'
+                reply_text = 'Invalid input.\nPlease provide an integer at the end of the /delete command.'
 
-        if '/del_all' in user_text.lower():
+        elif '/del_all' in user_text.lower():
             chat_id = chat_id
             reply_text = track_send.del_all(chat_id)
+        
+        elif '/price_check' in user_text.lower():
+            chat_id = chat_id
 
-        print('----------->',reply_text)
+            user_obj = UserPrice(
+                chat_id = chat_id,
+                first_name = body.get('message').get('from').get('first_name'),
+                last_name = body.get('message').get('from').get('last_name'),
+                product_url = tracking_id
+            )
+            try:
+                user_obj.save()
+                
+            except:
+                reply_text = 'You are already subscribed to this product price tracking!'
+            
+            reply_text = price_tracker.tracker(tracking_id)
+
+        print('reply_text-------->',reply_text)
         # Bot.send_sticker(chat_id=chat_id, sticker=InputFile(file_identifier))
         Bot.send_message(chat_id=chat_id, text=reply_text, reply_to_message_id=m_reply_id, parse_mode=telegram.ParseMode.HTML)
 
