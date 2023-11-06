@@ -99,8 +99,6 @@ def get_history(chat_id):
       print(i.__dict__)
       reply_text +=  f"\n{count}. {i.tracking_id}"
       count += 1
-    if chat_id == 5164975159:
-      reply_text += '\nsmelly sheena'
   except UserInfo.DoesNotExist:
     reply_text = 'Entry does not exist.'
   return reply_text
